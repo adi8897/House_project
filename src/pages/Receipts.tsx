@@ -14,8 +14,11 @@ import {
 import { money, shortDate } from "../lib/format";
 import { Badge, Card, Icon, seriesVar } from "../components/ui";
 
-const kb = (n: number) =>
-  n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`;
+const fileSize = (n: number) => {
+  if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  if (n >= 1024) return `${Math.round(n / 1024)} KB`;
+  return `${n} B`;
+};
 
 export default function Receipts() {
   const { state } = useStore();
@@ -143,7 +146,7 @@ export default function Receipts() {
       <div className="row" style={{ justifyContent: "space-between" }}>
         <span className="hint">
           {items.length} קבלות
-          {usage && ` · ${kb(usage.usage)} בשימוש מתוך ${kb(usage.quota)} שהדפדפן הקצה`}
+          {usage && ` · ${fileSize(usage.usage)} בשימוש מתוך ${fileSize(usage.quota)} שהדפדפן הקצה`}
         </span>
         <div className="row" style={{ gap: 8 }}>
           {persisted === null ? (
@@ -187,7 +190,8 @@ export default function Receipts() {
                     {item.name}
                   </span>
                   <span className="hint">
-                    {kb(item.size)} · {shortDate(item.addedAt.slice(0, 10))}
+                    <span dir="ltr">{fileSize(item.size)}</span> ·{" "}
+                    {shortDate(item.addedAt.slice(0, 10))}
                   </span>
                   <select
                     className="select"
