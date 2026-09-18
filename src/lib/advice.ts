@@ -1,5 +1,5 @@
 import type { AppState } from "../data/types";
-import { computeTotals } from "./selectors";
+import { buildCost, computeTotals, rollupCategories } from "./selectors";
 import { annuityPayment, computeMix, dti, principalFromPayment } from "./mortgage";
 
 export type Impact = "principal" | "payment" | "risk";
@@ -49,34 +49,33 @@ export function buildRecommendations(state: AppState): Recommendation[] {
     });
   }
 
-  // 2 — Build size. The single biggest lever in the budget.
-  const sqmDelta = s.buildSizeSqm - s.maxBuildSizeSqm;
-  if (sqmDelta > 0) {
-    const saving = sqmDelta * s.buildCostPerSqm;
+  // 2 — Categories spent past their budget.
+  const over = rollupCategories(state).filter((r) => !r.isReserve && r.overspend > 0);
+  for (const cat of over) {
     out.push({
-      id: "sqm-max",
-      title: `התקציב בנוי ל-${round(s.buildSizeSqm)} מ״ר, אבל הגדרתם מקסימום ${round(s.maxBuildSizeSqm)} מ״ר`,
-      body: `שורת הבניה בתקציב היא ${fmt(s.buildSizeSqm * s.buildCostPerSqm)} — שהם ${round(s.buildSizeSqm)} מ״ר במחיר ${fmt(s.buildCostPerSqm)} למ״ר. אם תבנו ${round(s.maxBuildSizeSqm)} מ״ר כפי שרשמתם כגודל המקסימלי, תחסכו ${fmt(saving)} מיידית. זה הצעד היחיד שבכוחו לסגור את פער הרזרבה במכה אחת.`,
-      severity: "warning",
-      impact: ["principal", "payment"],
-      principalSaving: saving,
-      paymentSaving: perShekel(saving),
-      action: `לרדת ל-${round(s.maxBuildSizeSqm)} מ״ר`,
+      id: `over-${cat.id}`,
+      title: `חריגה בקטגוריית ${cat.name}`,
+      body: `שילמתם ${fmt(cat.spent)} מול תקציב של ${fmt(cat.budget)} — חריגה של ${fmt(cat.overspend)}. החריגה לא מגדילה את סה״כ הפרויקט בחוברת, אבל היא כן אומרת שהכסף הזה יצא ממקום אחר. צריך להחליט: להעלות את תקציב הקטגוריה (ואז סך הפרויקט גדל), או לקזז מקטגוריה אחרת.`,
+      severity: "serious",
+      impact: ["risk"],
+      action: `לעדכן את תקציב ${cat.name} או לקזז מקטגוריה אחרת`,
     });
   }
 
-  const netDelta = s.buildSizeSqm - s.netNeedSqm;
-  if (netDelta > 0) {
+  // 3 — Build size. The single biggest lever in the budget.
+  const netDelta = s.houseSqm - s.netNeedSqm;
+  if (netDelta > 0.5) {
+    // Only the indoor area moves; the balcony stays and keeps its weighted cost.
     const saving = netDelta * s.buildCostPerSqm;
     out.push({
       id: "sqm-net",
-      title: `הצורך הנטו שחישבתם הוא ${s.netNeedSqm} מ״ר`,
-      body: `סכימת החדרים שרציתם מגיעה ל-${s.netNeedSqm} מ״ר. בניה לפי הצורך הנטו במקום ${round(s.buildSizeSqm)} מ״ר חוסכת ${fmt(saving)} — ומורידה ${fmt(perShekel(saving))} מההחזר החודשי. שווה לבדוק עם האדריכל אם דגם צומח (בניה שמתרחבת בהמשך) נותן לכם את אותו בית בפחות כסף היום.`,
+      title: `הצורך הנטו שחישבתם הוא ${round(s.netNeedSqm)} מ״ר, והתקציב בנוי ל-${round(s.houseSqm)}`,
+      body: `שורת הבניה מחושבת כ-(${round(s.houseSqm)} מ״ר בית + ${pct(s.balconyWeight)} מ-${round(s.balconySqm)} מ״ר מרפסת) × ${fmt(s.buildCostPerSqm)} למ״ר = ${fmt(buildCost(s))}. סכימת החדרים שאתם באמת צריכים מגיעה ל-${round(s.netNeedSqm)} מ״ר בלבד. הקטנת הבית לגודל הזה חוסכת ${fmt(saving)} ומורידה ${fmt(perShekel(saving))} מההחזר החודשי — זה המנוף הגדול ביותר בתקציב.`,
       severity: "warning",
       impact: ["principal", "payment"],
       principalSaving: saving,
       paymentSaving: perShekel(saving),
-      action: `לשקול דגם צומח ב-${s.netNeedSqm} מ״ר`,
+      action: `לרדת מ-${round(s.houseSqm)} ל-${round(s.netNeedSqm)} מ״ר`,
     });
   }
 
@@ -282,11 +281,8 @@ export function buildScenarios(
   return scenarios;
 }
 
-/**
- * Shrinking the house to the net need already includes shrinking it to the stated
- * maximum, so counting both would double-count the same square metres.
- */
-export const EXCLUSIVE_GROUPS: string[][] = [["sqm-max", "sqm-net"]];
+/** Levers that would double-count the same shekels if selected together. */
+export const EXCLUSIVE_GROUPS: string[][] = [];
 
 export function conflictsWith(id: string): string[] {
   return EXCLUSIVE_GROUPS.filter((g) => g.includes(id)).flatMap((g) =>

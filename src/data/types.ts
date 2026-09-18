@@ -18,12 +18,20 @@ export interface Category {
   isReserve?: boolean;
 }
 
+/**
+ * Lines the booklet computes rather than states. Their `amount` is recalculated
+ * from settings and the other categories, so editing the house size or spending
+ * more moves them the way the spreadsheet does.
+ */
+export type DerivedLine = "build" | "reserve";
+
 export interface BudgetLine {
   id: string;
   categoryId: CategoryId;
   name: string;
   amount: number;
   note?: string;
+  derivedFrom?: DerivedLine;
 }
 
 export interface Expense {
@@ -85,13 +93,23 @@ export interface Settings {
   desiredRepayment: number;
   cpiAssumption: number;
   primeRate: number;
-  buildSizeSqm: number;
+  /** Indoor area of the house. The booklet's "הגודל המקסימלי שלנו". */
+  houseSqm: number;
+  /** Balconies are costed at a fraction of the indoor rate, not excluded. */
+  balconySqm: number;
+  balconyWeight: number;
   buildCostPerSqm: number;
-  maxBuildSizeSqm: number;
+  /** Area the room list actually needs — the booklet's "סה״כ צורך נטו". */
   netNeedSqm: number;
+  /** Reserve as a share of what is still left to spend. */
+  reserveRate: number;
   pensionGap: number;
   bankDtiCap: number;
 }
+
+/** Billable area: indoor plus the weighted balcony, exactly as the booklet computes it. */
+export const billableSqm = (s: Pick<Settings, "houseSqm" | "balconySqm" | "balconyWeight">) =>
+  s.houseSqm + s.balconyWeight * s.balconySqm;
 
 export interface AppState {
   settings: Settings;

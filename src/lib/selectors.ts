@@ -1,6 +1,24 @@
-import type { AppState, CategoryId } from "../data/types";
+import type { AppState, BudgetLine, CategoryId, Settings } from "../data/types";
+import { billableSqm } from "../data/types";
 import { CATEGORIES } from "../data/seed";
 import { annuityPayment, computeMix, principalFromPayment } from "./mortgage";
+
+/** Categories the reserve is calculated over — the booklet's SUM(E3:E8), which skips קבלה. */
+const RESERVE_BASE: CategoryId[] = [
+  "migrash",
+  "tashtiot",
+  "agrot",
+  "baaleyMiktzoa",
+  "halbashot",
+  "bniya",
+];
+
+export const buildCost = (s: Settings) => billableSqm(s) * s.buildCostPerSqm;
+
+/** A line's effective amount: derived lines ignore their stored value. */
+export function lineAmount(line: BudgetLine, settings: Settings): number {
+  return line.derivedFrom === "build" ? buildCost(settings) : line.amount;
+}
 
 export interface CategoryRollup {
   id: CategoryId;
@@ -14,14 +32,16 @@ export interface CategoryRollup {
   remaining: number;
   /** Remaining that is not yet covered by a planned expense line. */
   unplanned: number;
+  /** Amount spent beyond the category's budget. */
+  overspend: number;
   progress: number;
 }
 
 export function rollupCategories(state: AppState): CategoryRollup[] {
-  return CATEGORIES.map((cat) => {
+  const rows = CATEGORIES.map((cat) => {
     const budget = state.budgetLines
       .filter((l) => l.categoryId === cat.id)
-      .reduce((s, l) => s + l.amount, 0);
+      .reduce((s, l) => s + lineAmount(l, state.settings), 0);
     const spent = state.expenses
       .filter((e) => e.categoryId === cat.id)
       .reduce((s, e) => s + e.amount, 0);
@@ -40,9 +60,26 @@ export function rollupCategories(state: AppState): CategoryRollup[] {
       planned,
       remaining,
       unplanned: Math.max(0, remaining - planned),
+      overspend: Math.max(0, -remaining),
       progress: budget > 0 ? Math.min(1, spent / budget) : 0,
     };
   });
+
+  // The reserve is a share of what is still left to spend, so it shrinks as the
+  // project is paid down — and it has to be computed after the other rows exist.
+  const base = rows
+    .filter((r) => RESERVE_BASE.includes(r.id))
+    .reduce((s, r) => s + r.remaining, 0);
+  const reserveRow = rows.find((r) => r.isReserve);
+  if (reserveRow) {
+    reserveRow.budget = base * state.settings.reserveRate;
+    reserveRow.remaining = reserveRow.budget - reserveRow.spent;
+    reserveRow.unplanned = Math.max(0, reserveRow.remaining - reserveRow.planned);
+    reserveRow.progress =
+      reserveRow.budget > 0 ? Math.min(1, reserveRow.spent / reserveRow.budget) : 0;
+  }
+
+  return rows;
 }
 
 export interface Totals {

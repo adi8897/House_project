@@ -10,7 +10,11 @@ import {
 import type { AppState } from "../data/types";
 import { INITIAL_STATE } from "../data/seed";
 
-const KEY = "bayit.state.v1";
+/**
+ * Bumped when the seed changes in a way saved state would mask — the v1 payload is
+ * left in place rather than cleared, so nothing a browser already holds is destroyed.
+ */
+const KEY = "bayit.state.v2";
 
 function load(): AppState {
   try {

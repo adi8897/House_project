@@ -71,7 +71,7 @@ export const BUDGET_LINES: BudgetLine[] = [
   { id: "b-p2", categoryId: "baaleyMiktzoa", name: "אדריכל/ית (קבוצתי)", amount: 50000 },
   { id: "b-p3", categoryId: "baaleyMiktzoa", name: "מהנדס/ת (קבוצתי)", amount: 13000 },
   { id: "b-p4", categoryId: "baaleyMiktzoa", name: "פיקוח על קבלן (קבוצתי)", amount: 50000 },
-  { id: "b-p5", categoryId: "baaleyMiktzoa", name: "עיצוב פנים", amount: 0, note: "דילמה — טרם הוחלט" },
+  { id: "b-p5", categoryId: "baaleyMiktzoa", name: "עיצוב פנים", amount: 0, note: "בחוברת עדיין 0 (״דילמה״), אבל כבר שולמו 75,000 ₪ למעצבת — זה מה שמוציא את הקטגוריה מהתקציב" },
   { id: "b-p6", categoryId: "baaleyMiktzoa", name: "ייעוצים פרטניים (תאורה, בטיחות, נגישות, מס)", amount: 0, note: "דילמה — טרם הוחלט" },
   { id: "b-p7", categoryId: "baaleyMiktzoa", name: "עיצוב גינה", amount: 0, note: "דילמה — טרם הוחלט" },
   { id: "b-p8", categoryId: "baaleyMiktzoa", name: "ניהול בניה / פרויקטור", amount: 0, note: "דילמה — טרם הוחלט" },
@@ -93,11 +93,11 @@ export const BUDGET_LINES: BudgetLine[] = [
   { id: "b-h14", categoryId: "halbashot", name: "מערכת ישיבה לגינה", amount: 0, note: "חובה — טרם תומחר" },
   { id: "b-h15", categoryId: "halbashot", name: "גג סולארי", amount: 0, note: "ייתכן שיהיה חובה ויעלה כ-75,000 ₪" },
 
-  // בניה — 1,667,340
-  { id: "b-n1", categoryId: "bniya", name: "בניה ערומה", amount: 1667340, note: "157 מ״ר × 10,620 ₪ למ״ר כולל מע״מ" },
+  // בניה — מחושב: (בית + 40% מהמרפסת) × מחיר למ״ר
+  { id: "b-n1", categoryId: "bniya", name: "בניה ערומה", amount: 1667340, derivedFrom: "build", note: "מחושב לפי גודל הבית והמרפסת — נשלט ממסך התקציב" },
 
-  // רזרבה
-  { id: "b-r1", categoryId: "rezerva", name: "רזרבת סיכון", amount: 340724.9025, note: "לא נכנס לחישוב סה״כ עלות הפרויקט" },
+  // רזרבה — מחושב: 15% מהיתרה להוצאה
+  { id: "b-r1", categoryId: "rezerva", name: "רזרבת סיכון", amount: 0, derivedFrom: "reserve", note: "15% מהיתרה להוצאה · לא נכנס לחישוב סה״כ עלות הפרויקט" },
 ];
 
 export const EXPENSES: Expense[] = [
@@ -108,6 +108,7 @@ export const EXPENSES: Expense[] = [
   { id: "e5", date: "2026-02-27", amount: 80600, categoryId: "baaleyMiktzoa", name: "פיתוח שטח — בעלי מקצוע", payee: "קרן נאמנות", note: "חלק מהעברה לנאמנות בסך 130,600 ₪" },
   { id: "e6", date: "2026-08-25", amount: 300000, categoryId: "tashtiot", name: "פיתוח שטח — תשתיות", payee: "החברה הכלכלית עמק המעיינות" },
   { id: "e7", date: "2026-09-16", amount: 3647, categoryId: "migrash", name: "שובר לפתיחת תיק לחכירת מגרש", payee: "רמ״י" },
+  { id: "e8", date: "2026-09-18", amount: 75000, categoryId: "baaleyMiktzoa", name: "מעצבת פנים", payee: "מעצבת פנים" },
 ];
 
 export const PLANNED: PlannedExpense[] = [
@@ -120,7 +121,8 @@ export const CAPITAL: CapitalSource[] = [
   { id: "c2", name: "עו״ש של עדי בבנק יהב", owner: "adi", amount: 13377, usable: 1, kind: "cash" },
   { id: "c3", name: "קרן כספית של אייל במזרחי", owner: "eyal", amount: 32175, usable: 1, kind: "fund", altAmount: 20000 },
   { id: "c4", name: "קרן כספית של עדי בבנק יהב", owner: "adi", amount: 30000, usable: 1, kind: "fund", altAmount: 10000 },
-  { id: "c5", name: "קופת גמל של אייל בהראל", owner: "eyal", amount: 198929, usable: 1, kind: "fund", altAmount: 205000 },
+  { id: "c5", name: "קופת גמל של אייל בהראל", owner: "eyal", amount: 205000, usable: 1, kind: "fund" },
+  { id: "c13", name: "רווח מתנות חתונה", owner: "joint", amount: 250000, usable: 1, kind: "gift" },
   { id: "c6", name: "קופת גמל של עדי במיטב", owner: "adi", amount: 32930, usable: 1, kind: "fund", altAmount: 63000 },
   { id: "c7", name: "קרן השתלמות של עדי במיטב דש", owner: "adi", amount: 2517, usable: 0, kind: "pension", note: "תאריך נזילות 01/08/2030" },
   { id: "c8", name: "קרן השתלמות של אייל בכלל", owner: "eyal", amount: 6990, usable: 0, kind: "pension", altAmount: 7000, note: "תאריך נזילות לא ברור — אם עבר מועד הפדיון אפשר להתחשב ב-100%" },
@@ -142,15 +144,17 @@ export const SETTINGS: Settings = {
   monthlySavings: 6000,
   monthsToSave: 36,
   monthlyIncome: 37768.67,
-  monthlyExpenses: 26224,
-  currentRent: 4800,
-  desiredRepayment: 10000,
+  monthlyExpenses: 26424,
+  currentRent: 5000,
+  desiredRepayment: 9500,
   cpiAssumption: 2.5,
   primeRate: 6.0,
-  buildSizeSqm: 157,
+  houseSqm: 145,
+  balconySqm: 30,
+  balconyWeight: 0.4,
   buildCostPerSqm: 10620,
-  maxBuildSizeSqm: 145,
-  netNeedSqm: 138.6,
+  netNeedSqm: 126,
+  reserveRate: 0.15,
   pensionGap: 150000,
   bankDtiCap: 0.4,
 };
@@ -164,7 +168,7 @@ export const INCOME_LINES = [
 ];
 
 export const EXPENSE_LINES = [
-  { name: "דיור — שכירות הסוללים 7 ירושלים", amount: 4800 },
+  { name: "דיור — שכירות הסוללים 7 ירושלים", amount: 5000 },
   { name: "הוצאות בחשבון של עדי", amount: 11643.33 },
   { name: "הוצאות בחשבון של אייל", amount: 11780.67 },
   { name: "זליגה", amount: -2000 },
@@ -182,15 +186,15 @@ export const INITIAL_STATE: AppState = {
 /** Totals as stated in the consultants' booklet — used to flag drift after edits. */
 export const BOOKLET = {
   totalCost: 2739979.35,
-  spent: 458265,
-  remaining: 2281714.35,
-  liquidCapital: 993356,
-  potentialCapital: 1192863,
-  possibleMortgage: 1574803.15,
-  requiredRepayment: 8181.08,
+  spent: 533265,
+  remaining: 2206714.35,
+  liquidCapital: 1249427,
+  potentialCapital: 1448934,
+  possibleMortgage: 1496062.99,
+  requiredRepayment: 6078.77,
   maxRepayment: 16344.67,
-  surplus: 286444.8,
-  reserve: 340724.9025,
+  surplus: 538775.64,
+  reserve: 329474.9025,
   categoryTotals: {
     kabala: 84233,
     migrash: 214760,
@@ -199,6 +203,6 @@ export const BOOKLET = {
     baaleyMiktzoa: 123000,
     halbashot: 260000,
     bniya: 1667340,
-    rezerva: 340724.9025,
+    rezerva: 329474.9025,
   } as Record<string, number>,
 };

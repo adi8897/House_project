@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { useStore } from "../lib/store";
 import { BOOKLET, CATEGORIES } from "../data/seed";
 import type { CategoryId } from "../data/types";
-import { rollupCategories, computeTotals } from "../lib/selectors";
+import { buildCost, lineAmount, rollupCategories, computeTotals } from "../lib/selectors";
 import { money, percent, uid } from "../lib/format";
-import { Badge, Card, Icon, Progress, seriesVar } from "../components/ui";
+import { Badge, Card, Icon, NumberField, Progress, seriesVar } from "../components/ui";
 
 export default function Budget() {
   const { state, update } = useStore();
@@ -57,18 +57,64 @@ export default function Budget() {
         <div className="tile">
           <span className="tile-label">מחיר למ״ר בית</span>
           <span className="tile-value">
-            {money(totals.totalCost / state.settings.buildSizeSqm)}
+            {money(totals.totalCost / state.settings.houseSqm)}
           </span>
           <span className="tile-note">
-            עלות מלאה חלקי {state.settings.buildSizeSqm} מ״ר
+            עלות מלאה חלקי {state.settings.houseSqm} מ״ר
           </span>
         </div>
         <div className="tile">
           <span className="tile-label">רזרבה</span>
           <span className="tile-value">{money(totals.reserve)}</span>
-          <span className="tile-note">לא נכללת בסה״כ העלות</span>
+          <span className="tile-note">
+            {percent(state.settings.reserveRate, 0)} מהיתרה להוצאה · לא נכללת בסה״כ
+          </span>
         </div>
       </div>
+
+      <Card
+        title="גודל הבית"
+        sub="שורת הבניה בתקציב מחושבת מכאן — כל שינוי כאן מזיז את סך הפרויקט, את המשכנתא ואת ההמלצות"
+      >
+        <div className="grid grid-4">
+          <NumberField
+            label="גודל הבית"
+            suffix="מ״ר"
+            value={state.settings.houseSqm}
+            step={1}
+            min={0}
+            onChange={(houseSqm) => update({ settings: { ...state.settings, houseSqm } })}
+            hint={`הצורך הנטו שחישבתם: ${state.settings.netNeedSqm} מ״ר`}
+          />
+          <NumberField
+            label="מרפסות"
+            suffix="מ״ר"
+            value={state.settings.balconySqm}
+            step={1}
+            min={0}
+            onChange={(balconySqm) => update({ settings: { ...state.settings, balconySqm } })}
+            hint={`נספרות ב-${percent(state.settings.balconyWeight, 0)} מהתעריף`}
+          />
+          <NumberField
+            label="עלות בניה"
+            suffix="₪ למ״ר"
+            value={state.settings.buildCostPerSqm}
+            step={100}
+            onChange={(buildCostPerSqm) =>
+              update({ settings: { ...state.settings, buildCostPerSqm } })
+            }
+            hint="9,000 ₪ + מע״מ 18%"
+          />
+          <div className="tile">
+            <span className="tile-label">סה״כ עלות הבניה</span>
+            <span className="tile-value">{money(buildCost(state.settings))}</span>
+            <span className="tile-note">
+              ({state.settings.houseSqm} + {percent(state.settings.balconyWeight, 0)}×
+              {state.settings.balconySqm}) × {money(state.settings.buildCostPerSqm)}
+            </span>
+          </div>
+        </div>
+      </Card>
 
       {rows.map((r) => {
         const lines = state.budgetLines.filter((l) => l.categoryId === r.id);
@@ -123,29 +169,38 @@ export default function Budget() {
                               className="input"
                               value={l.name}
                               onChange={(e) => renameLine(l.id, e.target.value)}
+                              disabled={Boolean(l.derivedFrom)}
                               style={{ border: "none", padding: "2px 0", background: "none" }}
                             />
                           </td>
                           <td className="num">
-                            <input
-                              className="input input-num"
-                              type="number"
-                              value={l.amount}
-                              onChange={(e) => patchLine(l.id, Number(e.target.value))}
-                              style={{ width: 130 }}
-                            />
+                            {l.derivedFrom ? (
+                              <span style={{ fontWeight: 650 }}>
+                                {money(lineAmount(l, state.settings))}
+                              </span>
+                            ) : (
+                              <input
+                                className="input input-num"
+                                type="number"
+                                value={l.amount}
+                                onChange={(e) => patchLine(l.id, Number(e.target.value))}
+                                style={{ width: 130 }}
+                              />
+                            )}
                           </td>
                           <td className="hint" style={{ maxWidth: 360 }}>
-                            {l.note ?? ""}
+                            {l.derivedFrom && <Badge>מחושב</Badge>} {l.note ?? ""}
                           </td>
                           <td>
-                            <button
-                              className="btn btn-danger"
-                              onClick={() => removeLine(l.id)}
-                              aria-label={`מחיקת ${l.name}`}
-                            >
-                              <Icon name="trash" size={16} />
-                            </button>
+                            {!l.derivedFrom && (
+                              <button
+                                className="btn btn-danger"
+                                onClick={() => removeLine(l.id)}
+                                aria-label={`מחיקת ${l.name}`}
+                              >
+                                <Icon name="trash" size={16} />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
